@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Gimnasio</title>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#2f6f62"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f7f6f3;--card:#fff;--tx:#222;--mu:#8a8a85;--ac:#2f6f62;--acl:#e3efec;--bd:#e8e6e1;--rd:#c0453a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#222221;--tx:#eee;--mu:#999;--ac:#6fbfae;--acl:#27403a;--bd:#333;--rd:#e5786d}}
+:root[data-theme="dark"]{--bg:#171716;--card:#222221;--tx:#eee;--mu:#999;--ac:#6fbfae;--acl:#27403a;--bd:#333;--rd:#e5786d}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,-apple-system,Segoe UI,sans-serif;max-width:480px;margin:auto;padding:16px 16px 96px}
+h1{font-size:22px;margin:8px 0 14px}h2{font-size:15px;color:var(--mu);font-weight:600;margin:18px 0 8px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.mu{color:var(--mu);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid .c{text-align:center;padding:12px 6px;margin:0}
+.big{font-size:19px;font-weight:700}.red{color:var(--rd)}.grn{color:var(--ac)}
+button,input,select{font:inherit;color:var(--tx)}
+.b{background:var(--ac);color:#fff;border:0;border-radius:12px;padding:12px 16px;width:100%;font-weight:600}
+.b.s{background:var(--acl);color:var(--ac)}.b.w{width:auto;padding:8px 12px;font-size:14px}
+input,select{width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);margin:4px 0 10px}
+label{font-size:13px;color:var(--mu)}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--bd);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav div{display:flex;width:100%;max-width:480px}nav button{flex:1;background:none;border:0;padding:10px 0;font-size:12px;color:var(--mu)}nav button b{display:block;font-size:20px}nav .on{color:var(--ac);font-weight:700}
+.sh{position:fixed;inset:0;background:#0006;display:flex;align-items:flex-end;justify-content:center;z-index:9}
+.sh>div{background:var(--card);width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:90%;overflow:auto}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}.cal span{padding:9px 0;border-radius:10px;font-size:14px}
+.cal .d{background:var(--card);border:1px solid var(--bd)}.cal .t{border-color:var(--ac)}.cal .sel{background:var(--ac);color:#fff}.cal .has::after{content:"•";display:block;line-height:4px;font-size:16px}
+.bar{height:8px;background:var(--acl);border-radius:8px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--ac)}
+.bk{background:none;border:0;color:var(--ac);padding:0 0 8px;font-weight:600}
+</style></head><body>
+<div id="app"></div>
+<nav><div id="nav"></div></nav>
+<script src="clave.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const today=()=>iso(new Date());
+const money=n=>"$"+Math.round(n).toLocaleString("es-AR");
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const esc=s=>String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function ranges(){const n=new Date(),t=iso(n),dow=(n.getDay()+6)%7,w=new Date(n);w.setDate(n.getDate()-dow);
+ return{t,w:iso(w),m:t.slice(0,8)+"01"}}
+function form(title,fields,ok,pv){
+ const h=document.createElement("div");h.className="sh";
+ h.innerHTML=`<div><div class="row"><b>${title}</b><button class="bk" id="x">Cerrar</button></div>`+fields.map(f=>`<label>${f.l}</label>`+(f.o?(f.s?`<input id="s_${f.k}" placeholder="🔍 Escribí para buscar" autocomplete="off">`:"")+`<select id="f_${f.k}">${f.o.map(o=>`<option value="${o[0]}"${o[0]==f.v?" selected":""}>${o[1]}</option>`).join("")}</select>`:`<input id="f_${f.k}" type="${f.t||"text"}" value="${esc(f.v)}"${f.t==="number"?' inputmode="decimal"':""}>`)).join("")+(pv?`<div class="c row" style="background:var(--acl)"><span>Total a cobrar</span><b id="pv"></b></div>`:"")+`<button class="b" id="ok">Guardar</button></div>`;
+ const upd=()=>{if(!pv)return;const v={};fields.forEach(f=>v[f.k]=h.querySelector("#f_"+f.k).value.trim());const e=h.querySelector("#pv");if(e)e.textContent=money(pv(v))};
+ h.oninput=upd;h.onchange=upd;setTimeout(upd);
+ document.body.appendChild(h);
+ const norm=t=>String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+ fields.forEach(f=>{const el=h.querySelector("#f_"+f.k);
+  if(f.s)h.querySelector("#s_"+f.k).oninput=e=>{const q=norm(e.target.value),cur=el.value,op=f.o.filter(o=>o[0]===""||norm(o[1]).includes(q));
+   el.innerHTML=op.map(o=>`<option value="${o[0]}"${o[0]==cur?" selected":""}>${esc(o[1])}</option>`).join("");
+   const first=op.find(o=>o[0]!=="");if(q&&first&&!op.some(o=>o[0]!==""&&o[0]==cur))el.value=first[0];
+   el.dispatchEvent(new Event("change",{bubbles:true}))};
+  if(f.c)el.addEventListener("change",()=>f.c(el.value,(k,x)=>{const t=h.querySelector("#f_"+k);if(t)t.value=x;upd()}))});
+ h.onclick=e=>{if(e.target===h)h.remove()};$("#x").onclick=()=>h.remove();
+ $("#ok").onclick=()=>{const v={};fields.forEach(f=>v[f.k]=h.querySelector("#f_"+f.k).value.trim());if(ok(v)!==false){h.remove();save();render()}};
+}
+async function dl(name,data){try{const u=URL.createObjectURL(new Blob([data],{type:"application/octet-stream"}));const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);return true}catch(e){alert("No se pudo descargar");return false}}
+const fd=d=>d.split("-").reverse().join("/");
+const nowT=()=>{const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+const PUB=window.PUB_KEY||null;
+const TRIAL=7;
+let lic=null,lockMsg="";
+const dys=(a,b)=>Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/864e5);
+const addD=(a,n)=>{const d=new Date(a+"T12:00:00");d.setDate(d.getDate()+n);return iso(d)};
+const licSave=()=>{try{localStorage.setItem("gimnasio_lic",JSON.stringify(lic))}catch(e){}};
+function licInit(){const t=today();try{lic=JSON.parse(localStorage.getItem("gimnasio_lic"))}catch(e){lic=null}
+ if(!lic||!lic.id){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=crypto.getRandomValues(new Uint8Array(6));lic={id:[...r].map(x=>A[x%32]).join(""),inst:t,until:null,seen:t};licSave()}}
+const validUntil=()=>{const tr=addD(lic.inst,TRIAL);return lic.until&&lic.until>tr?lic.until:tr};
+const left=()=>dys(today(),validUntil());
+function licTick(){const t=today();lockMsg=lic.seen>t&&dys(t,lic.seen)>1?"La fecha del teléfono no es correcta. Corregila para continuar.":"";if(!lockMsg&&lic.seen<t){lic.seen=t;licSave()}}
+const isLocked=()=>!!(lockMsg||left()<0);
+const b64=x=>Uint8Array.from(atob(x.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
+async function activate(tok){const m=$("#lm"),say=t=>{if(m)m.textContent=t;else alert(t)};
+ try{const p=String(tok).trim().split(".");if(p.length!==3)throw"Clave inválida";const[id,u,sg]=p;
+  if(id!==lic.id)throw"Esta clave es de otro dispositivo";
+  const d=u.slice(0,4)+"-"+u.slice(4,6)+"-"+u.slice(6,8);
+  const k=await crypto.subtle.importKey("jwk",PUB,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]);
+  if(!await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},k,b64(sg),new TextEncoder().encode(id+"."+u)))throw"Clave inválida";
+  if(d<today())throw"Esta clave ya venció";
+  if(!lic.until||d>lic.until)lic.until=d;licSave();render();if(!m)alert("Listo. Suscripción activa hasta el "+fd(lic.until))
+ }catch(e){say(typeof e==="string"?e:"Clave inválida")}}
+const lockHtml=()=>`<div style="text-align:center;margin-top:8vh"><div style="font-size:48px">🔒</div><h1>${lockMsg?"Fecha incorrecta":"Suscripción vencida"}</h1><p class="mu">${lockMsg||"Para seguir usando la app, pedí tu clave de activación. Tus datos están guardados y no se pierden."}</p><div class="c"><div class="mu">Tu código de cliente</div><div class="big" style="font-size:30px;letter-spacing:4px">${lic.id}</div></div><div style="text-align:left"><label>Clave de activación</label><input id="lk" placeholder="Pegá la clave acá" autocapitalize="off" autocomplete="off"></div><button class="b" onclick="activate($('#lk').value)">Activar</button><p id="lm" class="red"></p></div>`;
+const licTxt=()=>left()<0?"vencida":left()==0?"vence hoy":"quedan "+left()+" día"+(left()==1?"":"s");
+const licChip=()=>PUB?`<div class="mu" style="margin:-6px 0 12px">🔑 Licencia: <b class="${left()<=5?"red":"grn"}">${licTxt()}</b></div>`:"";
+const banner0=()=>PUB&&left()>=0&&left()<=5?`<div class="c" style="background:var(--acl)">⏳ Tu suscripción vence ${left()==0?"hoy":"en "+left()+" día"+(left()==1?"":"s")}. Pedí tu clave para renovar.</div>`:"";
+const renewForm=()=>form("Renovar suscripción",[{k:"k",l:"Clave de activación"}],v=>{activate(v.k)});
+
+let db={socios:[],profs:[],movs:[],asist:[],clases:[],cfg:{cuota:0,gym:"Mi Gimnasio",ns:1,rec:1}};
+let ready=false,status="",msg="",tab="home",openS=null,q="",fl="t",cd=(new Date().getDay()+6)%7,pm=today().slice(0,7);
+function save(){try{localStorage.setItem("gimnasio",JSON.stringify(db));status="✓ Guardado en este teléfono"}catch(e){status="⚠ No se pudo guardar"}const el=$("#st");if(el)el.textContent=status}
+function load(){try{const l=JSON.parse(localStorage.getItem("gimnasio"));if(l)db=Object.assign(db,l)}catch(e){}
+ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+ gen();status="✓ Guardado en este teléfono";ready=true;render()}
+const mo=()=>today().slice(0,7),pad=n=>String(n||0).padStart(5,"0"),PL={efe:"Efectivo",tra:"Transferencia"};
+const nM=m=>{let[y,n]=m.split("-").map(Number);n++;if(n>12){n=1;y++}return y+"-"+String(n).padStart(2,"0")};
+const pM=m=>{let[y,n]=m.split("-").map(Number);n--;if(n<1){n=12;y--}return y+"-"+String(n).padStart(2,"0")};
+const MN=m=>new Date(m+"-15T12:00:00").toLocaleDateString("es-AR",{month:"long",year:"numeric"});
+const gs=id=>db.socios.find(s=>s.id===id)||{name:"?",num:0},pn=id=>(db.profs.find(p=>p.id===id)||{}).name||"";
+const sal=id=>(gs(id).ini||0)+db.movs.filter(m=>m.sid===id).reduce((a,m)=>a+(m.t==="cargo"?m.amt:-m.amt),0);
+const stx=n=>n>0?"Debe "+money(n):n<0?"A favor "+money(-n):"Al día";
+const cob=(f,t)=>db.movs.filter(m=>m.t==="pago"&&m.date>=f&&m.date<=t).reduce((a,m)=>a+m.amt,0);
+const ph=t=>{const d=String(t).replace(/\D/g,"").replace(/^0+/,"");return d.startsWith("54")?d:"549"+d};
+function gen(){let ch=0;db.socios.forEach(s=>{if(s.off)return;if(!s.gen)s.gen=pM(s.start||mo());let m=nM(s.gen);while(m<=mo()){const a=s.cuota||db.cfg.cuota||0;if(!a)break;db.movs.push({id:uid(),sid:s.id,t:"cargo",date:m+"-01",m,amt:a,c:"Cuota "+MN(m)});s.gen=m;m=nM(m);ch=1}});if(ch)save()}
+const tabs=[["home","💵","Caja"],["soc","👤","Socios"],["asi","✅","Asistencia"],["cla","📅","Clases"],["pro","🏋️","Profes"],["dat","💾","Datos"]];
+const banner=()=>banner0()+(tab==="home"&&!db.cfg.cuota?'<div class="c" style="background:var(--acl)" onclick="tab=\'dat\';render()">⚙ Configurá el valor de la cuota mensual en Datos para que se generen los cargos.</div>':"");
+function home(){const r=ranges(),ds=db.socios.filter(s=>!s.off&&sal(s.id)>0),td=ds.reduce((a,s)=>a+sal(s.id),0),ins=db.asist.filter(a=>a.date===today()&&!a.out).length,ps=db.movs.filter(m=>m.t==="pago").sort((a,b)=>(b.date+b.id).localeCompare(a.date+a.id)).slice(0,15);
+ return`<h1>${esc(db.cfg.gym)}</h1>${licChip()}<div class="grid">${[["Hoy",r.t],["Semana",r.w],["Mes",r.m]].map(x=>`<div class="c"><div class="mu">${x[0]}</div><div class="big grn">${money(cob(x[1],r.t))}</div></div>`).join("")}</div>
+ <div class="c row" style="margin-top:10px" onclick="tab='soc';fl='d';render()"><div><b>Socios con deuda</b><div class="mu">${ds.length} socios · ${ins} adentro ahora</div></div><b class="red">${money(td)}</b></div>
+ <button class="b" onclick="pagoForm()">+ Registrar pago</button><h2>Últimos pagos</h2>${ps.map(m=>`<div class="c row"><div><b>${esc(gs(m.sid).name)}</b><div class="mu">${fd(m.date)} · ${PL[m.pay]} · Recibo ${pad(m.rec)}</div></div><div><b class="grn">${money(m.amt)}</b> <button class="b s w" onclick="recibo('${m.id}')">🧾</button></div></div>`).join("")||'<p class="mu">Todavía no hay pagos.</p>'}`}
+const sl=()=>{const n=x=>String(x).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),qq=n(q);return db.socios.filter(s=>(fl==="b"?s.off:!s.off)&&(fl!=="d"||sal(s.id)>0)&&(!qq||n(s.name).includes(qq)||String(s.num)===q.trim())).sort((a,b)=>a.num-b.num).map(s=>{const b=sal(s.id);return`<div class="c row" onclick="openS='${s.id}';render();scrollTo(0,0)"><div><b>${esc(s.name)}</b><div class="mu">N° ${s.num}${pn(s.prof)?" · "+esc(pn(s.prof)):""}</div></div><b class="${b>0?"red":"grn"}">${stx(b)}</b></div>`}).join("")||'<p class="mu">No hay socios.</p>'};
+function socios(){if(openS)return ficha();
+ return`<h1>Socios</h1><div class="row" style="margin-bottom:8px">${[["t","Activos"],["d","Deudores"],["b","De baja"]].map(x=>`<button class="b ${fl===x[0]?"":"s"} w" onclick="fl='${x[0]}';render()">${x[1]}</button>`).join("")}</div><input placeholder="🔍 Nombre o N° de socio" value="${esc(q)}" oninput="q=this.value;$('#ls').innerHTML=sl()"><div id="ls">${sl()}</div><button class="b" onclick="socForm()">+ Nuevo socio</button>`}
+function ficha(){const s=gs(openS),b=sal(s.id),r=(l,v)=>v?`<div class="row" style="margin-top:6px"><span class="mu">${l}</span><b style="text-align:right">${v}</b></div>`:"",
+ ms=db.movs.filter(m=>m.sid===s.id).sort((a,b)=>(b.date+b.id).localeCompare(a.date+a.id)).slice(0,24),as=db.asist.filter(a=>a.sid===s.id).sort((a,b)=>(b.date+b.in).localeCompare(a.date+a.in)).slice(0,5);
+ return`<button class="bk" onclick="openS=null;render()">‹ Socios</button><div class="c"><div class="row"><h1 style="margin:0">${esc(s.name)}</h1><span class="mu">N° ${s.num}</span></div>${s.off?'<div class="red">Dado de baja</div>':""}
+ ${r("Teléfono",s.tel?`<a href="tel:${esc(s.tel)}">${esc(s.tel)}</a>`:"")}${r("Dirección",esc(s.dir))}${r("Edad",esc(s.ed))}${r("Tel. familiar",s.tel2?`<a href="tel:${esc(s.tel2)}">${esc(s.tel2)}</a>`:"")}${r("Profesor",esc(pn(s.prof)))}${r("Cuota",s.cuota?money(s.cuota):"general")}
+ ${s.nota?`<div class="mu" style="margin-top:8px">${esc(s.nota)}</div>`:""}</div>
+ <div class="c row"><b>Cuenta corriente</b><span class="big ${b>0?"red":"grn"}">${stx(b)}</span></div>
+ <button class="b" onclick="pagoForm('${s.id}')">+ Registrar pago</button><div class="row" style="margin-top:8px"><button class="b s" onclick="socForm('${s.id}')">Editar ficha</button><button class="b s" onclick="toggle('${s.id}')">${s.off?"Dar de alta":"Dar de baja"}</button></div>
+ <h2>Movimientos</h2>${ms.map(m=>`<div class="c row"><div><b>${esc(m.c)}</b><div class="mu">${fd(m.date)}${m.t==="pago"?" · "+PL[m.pay]+" · Recibo "+pad(m.rec):""}</div></div><div><b class="${m.t==="pago"?"grn":"red"}">${m.t==="pago"?"-":"+"}${money(m.amt)}</b> ${m.t==="pago"?`<button class="b s w" onclick="recibo('${m.id}')">🧾</button> `:""}<button class="b s w" onclick="delMov('${m.id}')">✕</button></div></div>`).join("")||'<p class="mu">Sin movimientos.</p>'}
+ <h2>Últimas asistencias</h2>${as.map(a=>`<div class="mu">${fd(a.date)} · ${a.in} – ${a.out||"sin salida"}</div>`).join("")||'<p class="mu">Sin asistencias.</p>'}`}
+function toggle(id){const s=gs(id);s.off=!s.off;if(!s.off)s.gen=pM(mo());gen();save();render()}
+function delMov(id){const m=db.movs.find(x=>x.id===id);if(m&&confirm("¿Eliminar "+m.c+" por "+money(m.amt)+"?")){db.movs=db.movs.filter(x=>x.id!==id);save();render()}}
+function socForm(id){const s=id?gs(id):{};form(id?"Editar socio":"Nuevo socio",[{k:"n",l:"Nombre y apellido",v:s.name},{k:"num",l:"N° de socio",t:"number",v:s.num||db.cfg.ns},{k:"tel",l:"Teléfono (con código de área, sin 0 ni 15)",t:"tel",v:s.tel},{k:"dir",l:"Dirección",v:s.dir},{k:"ed",l:"Edad",t:"number",v:s.ed},{k:"tel2",l:"Teléfono de un familiar",t:"tel",v:s.tel2},
+ {k:"p",l:"Profesor",o:[["","Sin profesor"],...db.profs.map(p=>[p.id,p.name])],v:s.prof},{k:"cu",l:"Cuota propia (vacío = cuota general)",t:"number",v:s.cuota||""},
+ ...(id?[]:[{k:"st",l:"Primer mes de cuota",t:"month",v:mo()},{k:"ini",l:"Deuda anterior (opcional)",t:"number",v:""}]),{k:"nt",l:"Observaciones (texto libre)",v:s.nota}],v=>{
+ const num=parseInt(v.num);if(!v.n||!num){alert("Completá el nombre y el N° de socio");return false}
+ if(db.socios.some(x=>x.num===num&&x.id!==s.id)){alert("Ese N° de socio ya existe");return false}
+ const o={name:v.n,num,tel:v.tel,dir:v.dir,ed:v.ed,tel2:v.tel2,prof:v.p,cuota:parseFloat(v.cu)||0,nota:v.nt};
+ if(id)Object.assign(s,o);else{Object.assign(o,{id:uid(),start:v.st||mo(),ini:parseFloat(v.ini)||0});db.socios.push(o)}
+ db.cfg.ns=Math.max(db.cfg.ns,num+1);gen()})}
+function pagoForm(sid){const op=db.socios.filter(s=>!s.off).sort((a,b)=>a.num-b.num).map(s=>[s.id,"#"+s.num+" "+s.name]);if(!op.length){alert("Primero cargá al menos un socio");return}
+ const f0=sid||op[0][0],sug=i=>Math.max(sal(i),0)||gs(i).cuota||db.cfg.cuota||"";
+ form("Registrar pago",[{k:"s",l:"Socio",o:op,s:1,v:f0,c:(v,set)=>set("a",sug(v))},{k:"a",l:"Importe",t:"number",v:sug(f0)},{k:"pay",l:"Forma de pago",o:[["efe","Efectivo"],["tra","Transferencia"]]},{k:"c",l:"Concepto (opcional)",v:""}],v=>{
+ const a=parseFloat(v.a),s=gs(v.s);if(!s.id||!(a>0)){alert("Elegí el socio e ingresá el importe");return false}
+ const p=db.profs.find(x=>x.id===s.prof),id=uid();db.movs.push({id,sid:s.id,t:"pago",date:today(),amt:a,pay:v.pay,c:v.c||"Pago de cuota",prof:p?p.id:"",pct:p?p.pct:0,rec:db.cfg.rec++});setTimeout(()=>recibo(id),50)})}
+const rt=m=>{const s=gs(m.sid);return`*${db.cfg.gym}*\nRecibo N° ${pad(m.rec)}\nFecha: ${fd(m.date)}\nSocio: ${s.name} (N° ${s.num})\nConcepto: ${m.c}\nForma de pago: ${PL[m.pay]}\n*Importe: ${money(m.amt)}*\nSaldo actual: ${stx(sal(m.sid))}`};
+function recibo(id){const m=db.movs.find(x=>x.id===id);if(!m)return;const s=gs(m.sid),h=document.createElement("div");h.className="sh";
+ h.innerHTML=`<div><div class="row"><b>Recibo ${pad(m.rec)}</b><button class="bk" id="x">Cerrar</button></div><div class="c"><div class="mu">${esc(db.cfg.gym)}</div><div class="big">${money(m.amt)}</div><div style="margin-top:8px">${esc(s.name)} · N° ${s.num}</div><div class="mu">${fd(m.date)} · ${PL[m.pay]}</div><div class="mu">${esc(m.c)}</div><div class="mu">Saldo actual: ${stx(sal(s.id))}</div></div><button class="b" id="wa">Enviar por WhatsApp</button><button class="b s" id="im" style="margin-top:8px">Compartir como imagen</button></div>`;
+ document.body.appendChild(h);h.onclick=e=>{if(e.target===h)h.remove()};h.querySelector("#x").onclick=()=>h.remove();
+ h.querySelector("#wa").onclick=()=>window.open("https://wa.me/"+(s.tel?ph(s.tel):"")+"?text="+encodeURIComponent(rt(m)),"_blank");h.querySelector("#im").onclick=()=>rimg(m)}
+function rimg(m){const T=rt(m).replace(/\*/g,"").split("\n"),c=document.createElement("canvas");c.width=600;c.height=110+T.length*50;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,600,c.height);x.fillStyle="#2f6f62";x.fillRect(0,0,600,70);x.fillStyle="#fff";x.font="bold 30px sans-serif";x.fillText(T[0],24,46);x.fillStyle="#222";x.font="26px sans-serif";T.slice(1).forEach((t,i)=>x.fillText(t,24,115+i*50));
+ c.toBlob(async b=>{const f=new File([b],"recibo-"+pad(m.rec)+".png",{type:"image/png"});try{if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f]});else dl(f.name,b)}catch(e){}})}
+function mark(s){const o=db.asist.find(a=>a.sid===s.id&&!a.out&&a.date===today());if(o){o.out=nowT();msg="👋 Salida: "+s.name}else{db.asist.push({id:uid(),sid:s.id,date:today(),in:nowT()});const b=sal(s.id);msg="✅ Entrada: "+s.name+(b>0?" · ⚠ "+stx(b):"")}save();render()}
+function markNum(){const n=parseInt($("#nn").value),s=db.socios.find(x=>x.num===n&&!x.off);if(!s){msg="No existe el socio N° "+(n||"");render();return}mark(s)}
+function byName(){form("Asistencia por nombre",[{k:"s",l:"Socio",s:1,o:db.socios.filter(s=>!s.off).sort((a,b)=>a.num-b.num).map(s=>[s.id,"#"+s.num+" "+s.name])}],v=>{if(!v.s)return false;setTimeout(()=>mark(gs(v.s)),50)})}
+function asi(){const ad=db.asist.filter(a=>a.date===today()).sort((a,b)=>b.in.localeCompare(a.in)),ins=ad.filter(a=>!a.out),fin=ad.filter(a=>a.out);
+ return`<h1>Asistencia</h1>${msg?`<div class="c" style="background:var(--acl)">${esc(msg)}</div>`:""}<div class="c"><label>N° de socio</label><input id="nn" type="number" inputmode="numeric" onkeydown="if(event.key==='Enter')markNum()"><button class="b" onclick="markNum()">Registrar entrada / salida</button><button class="b s" style="margin-top:8px" onclick="byName()">Buscar por nombre</button></div>
+ <h2>Adentro ahora (${ins.length})</h2>${ins.map(a=>`<div class="c row"><div><b>${esc(gs(a.sid).name)}</b><div class="mu">Entró ${a.in}</div></div><button class="b s w" onclick="gymOut('${a.id}')">Salida</button></div>`).join("")||'<p class="mu">Nadie por ahora.</p>'}
+ <h2>Ya salieron hoy (${fin.length})</h2>${fin.map(a=>`<div class="c row"><b>${esc(gs(a.sid).name)}</b><span class="mu">${a.in} – ${a.out}</span></div>`).join("")||'<p class="mu">—</p>'}`}
+function gymOut(id){const a=db.asist.find(x=>x.id===id);if(a){a.out=nowT();save();render()}}
+const DN=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+function cla(){const C=db.clases.filter(c=>c.d===cd).sort((a,b)=>a.t.localeCompare(b.t));
+ return`<h1>Clases</h1><div class="cal">${"LMXJVSD".split("").map((x,i)=>`<span class="d ${i===cd?"sel":""}" onclick="cd=${i};render()">${x}</span>`).join("")}</div><h2>${DN[cd]}</h2>${C.map(c=>`<div class="c row"><div><b>${c.t}${c.e?" – "+c.e:""}</b> · ${esc(c.n)}<div class="mu">${pn(c.p)?"👤 "+esc(pn(c.p)):""}</div></div><div><button class="b s w" onclick="claForm('${c.id}')">Editar</button> <button class="b s w" onclick="delCla('${c.id}')">✕</button></div></div>`).join("")||'<p class="mu">Sin clases este día.</p>'}<button class="b" onclick="claForm()">+ Agregar clase</button>`}
+function claForm(id){const c=db.clases.find(x=>x.id===id)||{};form(id?"Editar clase":"Nueva clase",[{k:"d",l:"Día",o:DN.map((n,i)=>[i,n]),v:c.d!=null?c.d:cd},{k:"t",l:"Desde",t:"time",v:c.t},{k:"e",l:"Hasta",t:"time",v:c.e},{k:"n",l:"Clase / actividad",v:c.n},{k:"p",l:"Profesor",o:[["","Sin asignar"],...db.profs.map(p=>[p.id,p.name])],v:c.p}],v=>{
+ if(!v.t||!v.n){alert("Completá el horario y el nombre de la clase");return false}
+ const o={d:+v.d,t:v.t,e:v.e,n:v.n,p:v.p};if(id)Object.assign(c,o);else db.clases.push(Object.assign(o,{id:uid()}));cd=o.d})}
+function delCla(id){if(confirm("¿Quitar esta clase de la agenda?")){db.clases=db.clases.filter(c=>c.id!==id);save();render()}}
+function proForm(id){const p=db.profs.find(x=>x.id===id)||{};form(id?"Editar profesor":"Nuevo profesor",[{k:"n",l:"Nombre",v:p.name},{k:"t",l:"Teléfono",t:"tel",v:p.tel},{k:"c",l:"Porcentaje que cobra (%)",t:"number",v:p.pct}],v=>{
+ const c=parseFloat(v.c);if(!v.n||isNaN(c)||c<0||c>100){alert("Completá el nombre y un porcentaje entre 0 y 100");return false}
+ const o={name:v.n,tel:v.t,pct:c};if(id)Object.assign(p,o);else db.profs.push(Object.assign(o,{id:uid()}))})}
+function delPro(id){if(confirm("¿Eliminar este profesor? Sus pagos ya registrados conservan su comisión. Los socios quedan sin profesor.")){db.profs=db.profs.filter(p=>p.id!==id);db.socios.forEach(s=>{if(s.prof===id)s.prof=""});save();render()}}
+function pro(){const R=db.profs.map(p=>{const ps=db.movs.filter(m=>m.t==="pago"&&m.prof===p.id&&m.date.slice(0,7)===pm);return{p,tot:ps.reduce((a,m)=>a+m.amt,0),co:ps.reduce((a,m)=>a+m.amt*m.pct/100,0),n:db.socios.filter(s=>s.prof===p.id&&!s.off).length}}),TC=R.reduce((a,x)=>a+x.co,0),TT=cob(pm+"-01",pm+"-31");
+ return`<h1>Profesores</h1><div class="row" style="margin-bottom:10px"><button class="b s w" onclick="pm=pM(pm);render()">‹</button><b style="text-transform:capitalize">${MN(pm)}</b><button class="b s w" onclick="pm=nM(pm);render()">›</button></div>
+ <div class="c"><div class="row"><span class="mu">Cobrado en el mes (total)</span><b>${money(TT)}</b></div><div class="row" style="margin-top:6px"><span class="mu">Total a pagar a profesores</span><b class="red">${money(TC)}</b></div><div class="row" style="margin-top:6px"><span class="mu">Queda para el gimnasio</span><b class="grn">${money(TT-TC)}</b></div></div>
+ ${R.map(x=>`<div class="c"><div class="row"><b>${esc(x.p.name)}</b><span class="mu">${x.p.pct}% · ${x.n} alumnos</span></div><div class="row" style="margin-top:8px"><span class="mu">Cobrado a sus alumnos</span><b>${money(x.tot)}</b></div><div class="row" style="margin-top:6px"><span class="mu">A pagar al profesor</span><b class="big red">${money(x.co)}</b></div><div class="row" style="margin-top:10px"><button class="b s w" onclick="proForm('${x.p.id}')">Editar</button><button class="b s w" onclick="delPro('${x.p.id}')">✕</button></div></div>`).join("")||'<p class="mu">Todavía no cargaste profesores.</p>'}<p class="mu">La comisión usa el % vigente al momento de cada cobro.</p><button class="b" onclick="proForm()">+ Nuevo profesor</button>`}
+function cfgForm(){form("Gimnasio",[{k:"g",l:"Nombre del gimnasio",v:db.cfg.gym},{k:"c",l:"Cuota mensual general",t:"number",v:db.cfg.cuota||""}],v=>{db.cfg.gym=v.g||"Mi Gimnasio";db.cfg.cuota=parseFloat(v.c)||0;gen()})}
+const backup=()=>dl("gimnasio-copia-"+today()+".json",JSON.stringify({version:1,fecha:today(),db},null,1));
+function restore(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!x.db||!x.db.socios)throw 0;if(!confirm("Se reemplazarán TODOS los datos actuales por los de la copia ("+x.db.socios.length+" socios). ¿Continuar?"))return;db=Object.assign(db,x.db);save();render();alert("Copia restaurada")}catch(e){alert("El archivo no es una copia válida")}};r.readAsText(f);inp.value=""}
+function dat(){return`<h1>Datos</h1><div class="c mu">${db.socios.length} socios · ${db.movs.length} movimientos · ${db.clases.length} clases</div>
+ <h2>Gimnasio</h2><div class="c"><div class="row"><span class="mu">Nombre</span><b>${esc(db.cfg.gym)}</b></div><div class="row" style="margin-top:6px"><span class="mu">Cuota mensual general</span><b>${money(db.cfg.cuota)}</b></div><button class="b s" style="margin-top:10px" onclick="cfgForm()">Editar</button></div>
+ <h2>Suscripción</h2><div class="c"><div class="row"><span class="mu">Código de cliente</span><b>${lic.id}</b></div><div class="row" style="margin-top:6px"><span class="mu">${PUB?(left()>=0?"Activa hasta":"Venció el"):"Sin control de suscripción"}</span><b>${PUB?fd(validUntil()):""}</b></div>${PUB?`<div class="row" style="margin-top:6px"><span class="mu">Días restantes</span><b class="${left()<=5?"red":"grn"}">${Math.max(0,left())}</b></div>`:""}${PUB?`<button class="b s" style="margin-top:10px" onclick="renewForm()">Ingresar clave de renovación</button>`:""}</div>
+ <h2>Copia de seguridad</h2><div class="c"><p class="mu" style="margin-top:0">Los datos viven en este teléfono. La copia incluye socios, pagos, asistencia, clases y profesores. Guardala en Drive o mandatela por WhatsApp.</p><button class="b" onclick="backup()">Descargar copia completa</button></div>
+ <div class="c"><p class="mu" style="margin-top:0">Si cambiás de celular: instalá la app, entrá a Datos y elegí tu archivo de copia. (La suscripción es por celular: el nuevo necesita una clave nueva.)</p><input type="file" accept=".json,application/json" onchange="restore(this)"></div>`}
+function render(){
+ if(!ready){$("#app").innerHTML='<p class="mu" style="text-align:center;margin-top:40vh">Cargando…</p>';return}
+ licTick();if(PUB&&isLocked()){$("#nav").innerHTML="";$("#app").innerHTML=lockHtml();return}
+ $("#app").innerHTML=banner()+{home,soc:socios,asi,cla,pro,dat}[tab]()+`<p class="mu" id="st" style="text-align:center;margin-top:18px">${status}</p>`;
+ $("#nav").innerHTML=tabs.map(t=>`<button class="${t[0]===tab?"on":""}" onclick="tab='${t[0]}';openS=null;msg='';render();scrollTo(0,0)"><b>${t[1]}</b>${t[2]}</button>`).join("")}
+licInit();render();load();if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script></body></html>
